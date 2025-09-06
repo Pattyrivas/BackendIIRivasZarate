@@ -1,0 +1,9 @@
+{{#if user}}
+  <h1>Bienvenido, {{user.first_name}} {{user.last_name}}!</h1>
+  <p>Email: {{user.email}}</p>
+  <p>Rol: {{user.role}}</p>
+  <a href="/api/sessions/logout">Cerrar Sesión</a>
+{{else}}
+  <h1>Inicia sesión para ver los productos</h1>
+  <a href="/login">Ir a Login</a>
+{{/if}}
