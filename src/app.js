@@ -4,6 +4,8 @@ import handlebars from "express-handlebars";
 import cookieParser from "cookie-parser";
 import passport from "passport";
 import dotenv from "dotenv";
+import productsRouter from './routes/products.router.js';
+import cartsRouter from './routes/carts.router.js';
 
 import { initPassport } from "./config/passport.config.js";
 
@@ -40,6 +42,12 @@ app.use(passport.initialize());
 app.use('/', viewsRouter);
 app.use('/api/sessions', sessionsRouter);
 app.use('/api/users', usersRouter);
+
+app.use('/api/products', productsRouter);
+app.use('/api/carts', cartsRouter);
+
+// Validación
+app.get('/ping', (req, res) => res.json({ ok: true }));
 
 // Server
 app.listen(PORT, () => {

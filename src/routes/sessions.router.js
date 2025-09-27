@@ -1,8 +1,10 @@
 import { Router } from "express";
 import passport from "passport";
 import jwt from "jsonwebtoken";
+import { current, requestReset, doReset } from '../controllers/auth.controller.js';
 
 const router = Router();
+const requireJwt = passport.authenticate('jwt', { session: false });
 const JWT_SECRET = process.env.JWT_SECRET || 'supersecretJWT';
 const COOKIE_NAME = 'jwt';
 
@@ -52,16 +54,18 @@ router.post('/login',
   }
 );
 
-// CURRENT: devuelve el usuario del JWT
-router.get('/current',
-  passport.authenticate('jwt', { session: false }),
-  (req, res) => res.json({ status: 'success', user: req.user })
-);
 
 // LOGOUT: borra cookie y vuelve a login
 router.get('/logout', (req, res) => {
   res.clearCookie(COOKIE_NAME);
   return res.redirect('/login');
 });
+
+// current con DTO
+router.get('/current', requireJwt, current);
+
+// password reset
+router.post('/forgot-password', requestReset);
+router.post('/reset-password', doReset);
 
 export default router;

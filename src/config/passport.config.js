@@ -1,17 +1,20 @@
 import passport from 'passport';
 import local from 'passport-local';
 import jwt from 'passport-jwt';
-import userModel from '../models/user.model.js';
+import userModel from '../dao/models/user.model.js';
 import { createHash, isValidPassword } from '../utils/password.js';
+import { JWT_SECRET } from './env.js'; // ✅ usa config centralizada
 
 const LocalStrategy = local.Strategy;
 const JwtStrategy   = jwt.Strategy;
 const ExtractJwt    = jwt.ExtractJwt;
 
-const cookieExtractor = (req) => (req && req.cookies ? req.cookies['jwt'] : null);
+// Extrae el JWT desde la cookie 'jwt'
+const cookieExtractor = (req) =>
+  (req && req.cookies ? req.cookies['jwt'] : null);
 
 export const initPassport = () => {
-  // REGISTER
+  // ========== REGISTER ==========
   passport.use('register', new LocalStrategy(
     { usernameField: 'email', passReqToCallback: true, session: false },
     async (req, email, password, done) => {
@@ -34,7 +37,7 @@ export const initPassport = () => {
           email,
           age,
           password: createHash(password),
-          role: 'user'
+          role: 'user',
         });
 
         return done(null, user);
@@ -48,7 +51,7 @@ export const initPassport = () => {
     }
   ));
 
-  // LOGIN
+  // ========== LOGIN ==========
   passport.use('login', new LocalStrategy(
     { usernameField: 'email', session: false },
     async (email, password, done) => {
@@ -65,17 +68,34 @@ export const initPassport = () => {
     }
   ));
 
-  // JWT
+  // ========== JWT ==========
   passport.use('jwt', new JwtStrategy(
     {
       jwtFromRequest: ExtractJwt.fromExtractors([cookieExtractor]),
-      secretOrKey: process.env.JWT_SECRET || 'supersecretJWT',
+      secretOrKey: JWT_SECRET,     // ✅ desde env.js (sin fallback débil)
       ignoreExpiration: false
     },
     async (payload, done) => {
       try {
-        return done(null, payload.user);
+        // Retro-compatible: soporta tokens { id } o { user: { id / _id } }
+        const userId =
+          payload?.id ||
+          payload?.user?.id ||
+          payload?.user?._id;
+
+        if (!userId) return done(null, false);
+
+        // ✅ Siempre traer el usuario fresco desde la BD
+        const user = await userModel
+          .findById(userId)
+          .select('-password');
+
+        if (!user) return done(null, false);
+
+      
+        return done(null, user); // req.user = usuario actualizado
       } catch (err) {
+        console.error('JWT exception:', err);
         return done(err, false);
       }
     }
